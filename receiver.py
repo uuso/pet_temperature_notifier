@@ -37,8 +37,10 @@ def serial_messaging_json(comport, delay = 0.5):
             data = {}
             msg = ser.read_until()[:-2].decode('utf-8') # [:-2] - из-за последних двух байтов '\r\n'            
             try:
-                data = json.loads(msg)
-                data["timestamp"] = datetime.datetime.now().isoformat()
+                temp = json.loads(msg)
+                # data["timestamp"] = datetime.datetime.now().isoformat() # не удобно - когда меняется температура едет табличка в логе
+                data = {"timestamp": datetime.datetime.now().isoformat()}
+                data.update(temp)                
                 yield data
             except Exception as ex:
                 print("Error \"{}\" at message: \"{}\"".format(ex, msg))

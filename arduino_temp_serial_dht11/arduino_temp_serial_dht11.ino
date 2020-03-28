@@ -21,8 +21,8 @@ void loop() {
   bool err = (isnan(h) || isnan(t));
 
   doc["error"] = err;
+  doc["temperature"] = t;  
   doc["humidity"] = h;
-  doc["temperature"] = t;
 
   serializeJson(doc, tempstr);
   Serial.println(tempstr);
