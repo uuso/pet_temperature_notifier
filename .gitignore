@@ -1,4 +1,5 @@
 .vscode/
 serial_venv/
 secrets.py
-log.txt
+*log.txt
+__pycache__/

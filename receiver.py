@@ -6,6 +6,8 @@ from serial.tools import list_ports
 import time, json, datetime
 # import json
 
+log_filepath = "log.txt"
+
 def choose_comport(default = False):
     coms = list_ports.comports(True)
     if not len(coms):
@@ -53,7 +55,7 @@ if __name__ == "__main__":
         exit()
     
     message = serial_messaging_json(comport)
-    with open("log.txt", "a", encoding="utf-8") as logfile:
+    with open(log_filepath, "a", encoding="utf-8") as logfile:
         while True:
             msg = next(message)
             logfile.write("{}\n".format(json.dumps(msg)))
