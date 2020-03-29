@@ -4,9 +4,9 @@
 import serial
 from serial.tools import list_ports
 import time, json, datetime
-# import json
 
-log_filepath = "log.txt"
+log_filepath = "logs/log.txt"
+notes_in_minute = 3
 
 def choose_comport(default = False):
     coms = list_ports.comports(True)

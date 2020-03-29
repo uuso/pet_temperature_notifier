@@ -1,7 +1,8 @@
 import json
 from dateutil.parser import isoparse
 from datetime import datetime, timedelta
-from receiver import log_filepath
+from collections import deque
+from receiver import log_filepath, notes_in_minute
 from file_read_backwards import FileReadBackwards
 
 class TempAnalytics:
@@ -15,13 +16,13 @@ class TempAnalytics:
 - в записях время записи будет храниться в формате UNIX-time (секунды с начала эпохи)
 для более быстрого сравнения
     """
-    _oldest_minutes = 20#60*4
+    _oldest_minutes = 60*4
     _rescan_minutes = 5
     _temp_delta = 2
     _timers = [10, 30, 60, 120]
     _inacc = 0.5
 
-    notes = []
+    notes = deque()
 
     def __init__(self, filepath = log_filepath, minutes = _oldest_minutes):
         """Заполнит систему предыдущими значениями (за последние 4 часа по-умолчанию)
@@ -41,12 +42,39 @@ class TempAnalytics:
                 else:
                     self.notes.append(parsed_line)
                     readed += 1
-            self.notes.reverse()
+            # self.notes.reverse() # для соблюдения порядка, иначе - все новые записи будут добавляться к самым старым
             print("Analytics filled with {notes} notes of the last {minutes} minutes.\nErrors: {errors}.".format(
                 notes = readed, minutes = minutes, errors = errors))
-            for note in self.notes:
-                print(note)
+
+            # for note in self.notes:
+            #     ts = note.pop("timestamp")
+            #     print("{} ago.\t{}".format(datetime.now() - datetime.fromtimestamp(ts), note))
+            # print(self.notes[0])
+    
+    def __str__(self):
+        show_notes = 10 # если указать 0 - выведет все записи
+        strs = "The last {} notes in analytics:\n".format(show_notes if show_notes else len(self.notes))
+        for lines in self.notes[-show_notes:]:
+            strs += str(lines) + '\n'
+        return strs
 
 
-if __name__ == "__main__":
-    TA = TempAnalytics()
+    def check(self, last_minutes = 10):
+        """Проверит, были тенденции к изменению температуры 
+        за последние <last_minutes> минут. Значение "0" - проверка
+        всех записей.
+        """
+        return 0
+
+
+    def minutes_elasted(self, unixtime):
+        delta = datetime.now() - datetime.fromtimestamp(unixtime)
+        return int(delta.seconds / 60)
+
+    def put(self, note):
+        self.notes.appendleft(note)
+        while self.minutes_elasted(self.notes[-1]["timestamp"]) > self._oldest_minutes:
+            self.notes.pop()
+
+if __name__ == "__main__":    
+    print(TempAnalytics())
