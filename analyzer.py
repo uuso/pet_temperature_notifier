@@ -1,9 +1,21 @@
 import json
+import logging
 from dateutil.parser import isoparse
 from datetime import datetime, timedelta
 from collections import deque
-from receiver import log_filepath, notes_in_minute
+from receiver import log_folder, log_filepath, notes_in_minute
 from file_read_backwards import FileReadBackwards
+
+log_formatter = logging.Formatter("%(asctime)s\t%(levelname)s\t%(message)s")
+handler_file = logging.FileHandler(filename = log_folder+"debug.log")  # -- file
+handler_file.setFormatter(log_formatter)
+
+logger = logging.getLogger()
+logger.addHandler(handler_file)
+
+handler_file.setLevel(logging.DEBUG)
+logger.setLevel(logging.DEBUG)
+
 
 class TempAnalytics:
     """
@@ -29,6 +41,9 @@ class TempAnalytics:
         если такие имеются.
         """
         border = (datetime.now() - timedelta(minutes=minutes)).timestamp()
+        logger.debug(f"Started filling TempAnalytics:")
+        logger.debug(f"_oldest_minutes: {self._oldest_minutes}, _rescan_minutes: {self._rescan_minutes},")
+        logger.debug(f"_temp_delta: {self._temp_delta}, _timers: {self._timers}, _inacc: {self._inacc}.")
         with FileReadBackwards(log_filepath, encoding="utf-8") as logfile:
             readed = 0
             errors = 0
@@ -42,8 +57,8 @@ class TempAnalytics:
                 else:
                     self.notes.append(parsed_line)
                     readed += 1
-            # self.notes.reverse() # для соблюдения порядка, иначе - все новые записи будут добавляться к самым старым
-            print("Analytics filled with {notes} notes of the last {minutes} minutes.\nErrors: {errors}.".format(
+                    
+            logger.info("Analytics filled with {notes} notes of the last {minutes} minutes. Errors: {errors}.".format(
                 notes = readed, minutes = minutes, errors = errors))
 
             # for note in self.notes:
@@ -54,8 +69,13 @@ class TempAnalytics:
     def __str__(self):
         show_notes = 10 # если указать 0 - выведет все записи
         strs = "The last {} notes in analytics:\n".format(show_notes if show_notes else len(self.notes))
-        for lines in self.notes[-show_notes:]:
-            strs += str(lines) + '\n'
+
+        # for lines in self.notes[-show_notes:]:
+        #     strs += str(lines) + '\n'
+
+        for linenum in range(show_notes):
+            line = self.notes[linenum]
+            strs += str(line) + f' - {self.minutes_elapsed(line["timestamp"])} min ago.\n'
         return strs
 
 
@@ -67,14 +87,18 @@ class TempAnalytics:
         return 0
 
 
-    def minutes_elasted(self, unixtime):
+    def minutes_elapsed(self, unixtime):
         delta = datetime.now() - datetime.fromtimestamp(unixtime)
         return int(delta.seconds / 60)
 
     def put(self, note):
+        logger.debug(f"Trying to append: {note}.")
         self.notes.appendleft(note)
-        while self.minutes_elasted(self.notes[-1]["timestamp"]) > self._oldest_minutes:
-            self.notes.pop()
+        logger.info(f"Appended: {note}.")
+        while self.minutes_elapsed(self.notes[-1]["timestamp"]) > self._oldest_minutes:
+            tmp = self.notes.pop()
+            print(type(tmp))
+            # logger.debug(f"Deleted overtimed note: {tmp} - {self.minutes_elapsed(tmp["timestamp"])} min.")
 
 if __name__ == "__main__":    
     print(TempAnalytics())

@@ -5,8 +5,10 @@ import serial
 from serial.tools import list_ports
 import time, json, datetime
 
-log_filepath = "logs/log.txt"
-notes_in_minute = 3
+log_folder = "logs/"
+log_filepath = log_folder + "log.txt"
+
+notes_in_minute = 3 # Ардуино опрашивает датчик каждые 20 секунд
 
 def choose_comport(default = False):
     coms = list_ports.comports(True)
