@@ -41,7 +41,9 @@ class TempAnalytics:
         если такие имеются.
         """
         border = (datetime.now() - timedelta(minutes=minutes)).timestamp()
-        logger.debug(f"Started filling TempAnalytics:")
+        logger.debug("")
+        logger.debug("-"*80)
+        logger.debug("Started filling TempAnalytics:")
         logger.debug(f"_oldest_minutes: {self._oldest_minutes}, _rescan_minutes: {self._rescan_minutes},")
         logger.debug(f"_temp_delta: {self._temp_delta}, _timers: {self._timers}, _inacc: {self._inacc}.")
         with FileReadBackwards(log_filepath, encoding="utf-8") as logfile:
@@ -58,9 +60,9 @@ class TempAnalytics:
                     self.notes.append(parsed_line)
                     readed += 1
                     
-            logger.info("Analytics filled with {notes} notes of the last {minutes} minutes. Errors: {errors}.".format(
-                notes = readed, minutes = minutes, errors = errors))
-
+        logger.info("Analytics filled with {notes} notes of the last {minutes} minutes. Errors: {errors}.".format(
+            notes = readed, minutes = minutes, errors = errors))
+        logger.debug("-"*80)
             # for note in self.notes:
             #     ts = note.pop("timestamp")
             #     print("{} ago.\t{}".format(datetime.now() - datetime.fromtimestamp(ts), note))
@@ -92,13 +94,29 @@ class TempAnalytics:
         return int(delta.seconds / 60)
 
     def put(self, note):
-        logger.debug(f"Trying to append: {note}.")
-        self.notes.appendleft(note)
-        logger.info(f"Appended: {note}.")
-        while self.minutes_elapsed(self.notes[-1]["timestamp"]) > self._oldest_minutes:
+        """
+        В идеале, должен принимать dict(), но может и парсить строковый JSON.
+        Положит новую запись в начало очереди, отсечёт устаревшие записи с конца.
+        """
+        logger.debug(f'Trying to append: {note}.')
+        if type(note) != dict:
+            logger.warning(f'TempAnalyzer.put() received non-dict object. Parsing...')
+            try:
+                note = json.loads(note)
+                logger.warning(f'OK')
+            except json.decoder.JSONDecodeError as ex:
+                logger.error("Failed parsing JSON in TempAnalyzer.put() method.")
+                return
+
+        try:
+            note["timestamp"] = isoparse(note["timestamp"]).timestamp()
+            self.notes.appendleft(note)
+            logger.info(f"Appended: {note}.")
+        except KeyError as ex:
+            logger.error(f'Caught Exception: "{ex}" in parsing or appending note.')
+        while len(self.notes) > 0 and self.minutes_elapsed(self.notes[-1]["timestamp"]) > self._oldest_minutes:
             tmp = self.notes.pop()
-            print(type(tmp))
-            # logger.debug(f"Deleted overtimed note: {tmp} - {self.minutes_elapsed(tmp["timestamp"])} min.")
+            logger.debug(f'Deleted overtimed ({self.minutes_elapsed(tmp["timestamp"])}/{self._oldest_minutes} min) note: {tmp}.')
 
 if __name__ == "__main__":    
-    print(TempAnalytics())
+    TA = TempAnalytics()
