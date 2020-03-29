@@ -41,6 +41,7 @@ class TempAnalytics:
         если такие имеются.
         """
         border = (datetime.now() - timedelta(minutes=minutes)).timestamp()
+        # border = (isoparse('2020-03-29T16:24:26.014048') - timedelta(minutes=minutes)).timestamp()
         logger.debug("")
         logger.debug("-"*80)
         logger.debug("Started filling TempAnalytics:")
@@ -81,16 +82,84 @@ class TempAnalytics:
         return strs
 
 
-    def check(self, last_minutes = 10):
+    def check_tendency(self, last_minutes = 10):
         """Проверит, были тенденции к изменению температуры 
         за последние <last_minutes> минут. Значение "0" - проверка
         всех записей.
-        """
-        return 0
 
+        Определим исследуемый участок, возьмем среднее за 1-2 самые 
+        старые минуты участка как исходную температуру. Пройдем по участку, 
+        определяя нарушения <_temp_delta>. Отсеим случайные нарушения (среднее по ближайшим). 
+        Будем вести список нарушений по приросту/убыванию температуры и время нарушения. 
+        Определим пиковые значения (отрицательные и положительные) и их время. 
+        Определим среднее за 1-2 самые свежие минуты как текущую температуру.
+
+        Решение по тенденции изменения: исходная-текущая -- если в норме, OK
+        если тенденции к изменению есть - оповещаем пиковыми значениями.  
+        нет. 
+        Если есть пиковые значения - оповещаем.      
+        """
+        logging.debug(f"Trying to find records made in {last_minutes} minutes.")
+        latest_index = -1
+        for index in reversed(range(last_minutes*notes_in_minute if len(self.notes) > last_minutes*notes_in_minute else len(self.notes))): # десятиминутные логи должны быть где-то в тех краях. Будем от этого спускаться к более свежим, пока не найдем десятиминутный, Поправил т.к. упирался в размер списка при малом количестве записей
+            
+            logging.debug(f"checking: index {index}/{len(self.notes)-1}.")
+            if self.minutes_elapsed(self.notes[index]["timestamp"]) <= last_minutes:
+                latest_index = index # нашли
+                break
+        if latest_index < notes_in_minute*2:
+            logger.warning(f'Tendency checking ({last_minutes} min) failed: Too small records count to analyze ({latest_index + 1}).')
+            return {"error": True}
+        
+        start_temp = .0
+        end_temp = .0
+
+        # вычислим start_temp
+        for _ in range(latest_index,latest_index-notes_in_minute, -1):
+            start_temp += self.notes[_]["temperature"]
+        start_temp = round(start_temp/notes_in_minute, 2)
+        logging.debug(f'Start temp: {start_temp}')
+        # вычислим end_temp
+        for _ in range(0, notes_in_minute):
+            end_temp += self.notes[_]["temperature"]
+        end_temp = round(end_temp/notes_in_minute, 2)
+        logging.debug(f'End temp: {end_temp}')
+
+        #заполним значениями с отсечением ошибок (округление с соседними)
+        warnings = []
+        for _ in range(0+notes_in_minute, latest_index-notes_in_minute):
+            if abs(self.notes[_]["temperature"] - start_temp) >= self._temp_delta: # подозрение на нарушение
+                logger.debug(f'Can be warning: {self.notes[_]} against {start_temp}.')
+                correct_temp = .0
+                for ss in range(_- int(notes_in_minute/2),_+int(notes_in_minute/2)+1): # возьмем соседние
+                    correct_temp += self.notes[ss]["temperature"]
+                correct_temp = round(correct_temp/notes_in_minute, 2)
+                if abs(correct_temp-start_temp) >=self._temp_delta: # подтверждено
+                    warnings.append([correct_temp-start_temp, self.notes[_]])
+                    logger.info(f'Temperature {correct_temp} is over delta ({correct_temp}/{start_temp}: {self.notes[_]}')
+                else:
+                    logger.debug(f'Its OK, {correct_temp} anainst {start_temp}.')
+            ### DEBUUUUUUG 
+            # else:
+            #     logger.debug(f'no warn with {abs(self.notes[_]["temperature"] - start_temp)} :: {self.notes[_]["temperature"]}')
+
+        if len(warnings) > 0:
+            # определим максимумы    
+            warnings_to_send = {}
+            for warn in warnings:
+                if warn[0] > 0:
+                    if not warnings_to_send.get("over") or warn[0] > warnings_to_send["over"][0]:
+                        warnings_to_send["over"] = warn
+                else:
+                    if not warnings_to_send.get("lover") or warn[0] < warnings_to_send["lover"][0]:
+                        warnings_to_send["lover"] = warn
+
+            
+        
 
     def minutes_elapsed(self, unixtime):
         delta = datetime.now() - datetime.fromtimestamp(unixtime)
+        # delta = isoparse('2020-03-29T16:24:26.014048') - datetime.fromtimestamp(unixtime)
         return int(delta.seconds / 60)
 
     def put(self, note):
@@ -120,3 +189,4 @@ class TempAnalytics:
 
 if __name__ == "__main__":    
     TA = TempAnalytics()
+    TA.check_tendency(30)
