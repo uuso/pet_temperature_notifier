@@ -7,7 +7,7 @@ from receiver import log_folder, log_filepath, notes_in_minute
 from file_read_backwards import FileReadBackwards
 
 log_formatter = logging.Formatter("%(asctime)s\t%(levelname)s\t%(message)s")
-handler_file = logging.FileHandler(filename = log_folder+"debug.log")  # -- file
+handler_file = logging.FileHandler(filename = log_folder+"debug.log")
 handler_file.setFormatter(log_formatter)
 
 logger = logging.getLogger()
@@ -16,7 +16,7 @@ logger.addHandler(handler_file)
 handler_file.setLevel(logging.DEBUG)
 logger.setLevel(logging.DEBUG)
 
-DEBUG_DATE_NOW = isoparse('2020-03-29T16:24:26.014048')
+DEBUG_DATE_NOW = isoparse("2020-03-29T02:49:33.792004")
 
 class TempAnalytics:
     """
@@ -67,17 +67,10 @@ class TempAnalytics:
         logger.info("Analytics filled with {notes} notes of the last {minutes} minutes. Errors: {errors}.".format(
             notes = readed, minutes = minutes, errors = errors))
         logger.debug("-"*80)
-            # for note in self.notes:
-            #     ts = note.pop("timestamp")
-            #     print("{} ago.\t{}".format(datetime.now() - datetime.fromtimestamp(ts), note))
-            # print(self.notes[0])
     
     def __str__(self):
-        show_notes = 10 # если указать 0 - выведет все записи
-        strs = "The last {} notes in analytics:\n".format(show_notes if show_notes else len(self.notes))
-
-        # for lines in self.notes[-show_notes:]:
-        #     strs += str(lines) + '\n'
+        show_notes = 5 * notes_in_minute
+        strs = "The last {} notes in analytics:\n".format(show_notes)
 
         for linenum in range(show_notes):
             line = self.notes[linenum]
@@ -102,6 +95,7 @@ class TempAnalytics:
         нет. 
         Если есть пиковые значения - оповещаем.      
         """
+        logging.debug(f'Current time is {(DEBUG_DATE_NOW if DEBUG_DATE_NOW else datetime.now()).isoformat()}.')
         logging.debug(f"Trying to find records made in {last_minutes} minutes.")
         latest_index = -1
         for index in reversed(range(last_minutes*notes_in_minute if len(self.notes) > last_minutes*notes_in_minute else len(self.notes))): # десятиминутные логи должны быть где-то в тех краях. Будем от этого спускаться к более свежим, пока не найдем десятиминутный, Поправил т.к. упирался в размер списка при малом количестве записей
@@ -128,26 +122,23 @@ class TempAnalytics:
         end_temp = round(end_temp/notes_in_minute, 2)
         logging.debug(f'End temp: {end_temp}')
 
-        #заполним значениями с отсечением ошибок (округление с соседними)
+        # заполним значениями с отсечением ошибок (округление с соседними)
         warnings = []
-        for _ in range(0+notes_in_minute, latest_index-notes_in_minute):
+        for _ in range(0, latest_index-notes_in_minute):
             if abs(self.notes[_]["temperature"] - start_temp) >= self._temp_delta: # подозрение на нарушение
                 logger.debug(f'Can be warning: {self.notes[_]} against {start_temp}.')
                 correct_temp = .0
                 for ss in range(_- int(notes_in_minute/2),_+int(notes_in_minute/2)+1): # возьмем соседние
                     correct_temp += self.notes[ss]["temperature"]
-                correct_temp = round(correct_temp/notes_in_minute, 2)
+                correct_temp = round(correct_temp/notes_in_minute,2)
                 if abs(correct_temp-start_temp) >=self._temp_delta: # подтверждено
-                    warnings.append([correct_temp-start_temp, self.notes[_]])
-                    logger.info(f'Temperature {correct_temp} is over delta ({correct_temp}/{start_temp}: {self.notes[_]}')
+                    warnings.append([round(correct_temp-start_temp,2), self.notes[_]])
+                    logger.info(f'Temperature {correct_temp} is over delta ({correct_temp}/{start_temp}) at {datetime.fromtimestamp(self.notes[_]["timestamp"])}')
                 else:
                     logger.debug(f'Its OK, {correct_temp} anainst {start_temp}.')
-            ### DEBUUUUUUG 
-            # else:
-            #     logger.debug(f'no warn with {abs(self.notes[_]["temperature"] - start_temp)} :: {self.notes[_]["temperature"]}')
 
+        # определим максимумы    
         if len(warnings) > 0:
-            # определим максимумы    
             warnings_to_send = {}
             for warn in warnings:
                 if warn[0] > 0:
@@ -155,9 +146,7 @@ class TempAnalytics:
                         warnings_to_send["over"] = warn
                 else:
                     if not warnings_to_send.get("lover") or warn[0] < warnings_to_send["lover"][0]:
-                        warnings_to_send["lover"] = warn
-
-            
+                        warnings_to_send["lover"] = warn            
         
 
     def minutes_elapsed(self, unixtime):        
@@ -193,4 +182,4 @@ class TempAnalytics:
 
 if __name__ == "__main__":    
     TA = TempAnalytics()
-    TA.check_tendency(30)
+    TA.check_tendency(10)    
