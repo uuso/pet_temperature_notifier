@@ -16,7 +16,7 @@ logger.addHandler(handler_file)
 handler_file.setLevel(logging.DEBUG)
 logger.setLevel(logging.DEBUG)
 
-DEBUG_DATE_NOW = isoparse("2020-03-29T02:49:33.792004")
+DEBUG_DATE_NOW = False #isoparse("2020-03-29T02:49:33.792004")
 
 class TempAnalytics:
     """
@@ -137,6 +137,11 @@ class TempAnalytics:
                 else:
                     logger.debug(f'Its OK, {correct_temp} anainst {start_temp}.')
 
+        # подготовка к выводу результата
+        now = DEBUG_DATE_NOW if DEBUG_DATE_NOW else datetime.now() ###
+        result = { "warnings": False, "current_time": now.isoformat(), "time_delta": last_minutes,
+        "start_temp": start_temp, "end_temp": end_temp, "error": False }
+
         # определим максимумы    
         if len(warnings) > 0:
             warnings_to_send = {}
@@ -146,7 +151,16 @@ class TempAnalytics:
                         warnings_to_send["over"] = warn
                 else:
                     if not warnings_to_send.get("lover") or warn[0] < warnings_to_send["lover"][0]:
-                        warnings_to_send["lover"] = warn            
+                        warnings_to_send["lover"] = warn
+            
+            # переведём даты в ISO8601
+            for _, value in warnings_to_send.items():
+                value[1]["timestamp"] = datetime.fromtimestamp(value[1]["timestamp"]).isoformat()
+            result["warnings"] = warnings_to_send
+        
+        return result
+
+
         
 
     def minutes_elapsed(self, unixtime):        
@@ -182,4 +196,4 @@ class TempAnalytics:
 
 if __name__ == "__main__":    
     TA = TempAnalytics()
-    TA.check_tendency(10)    
+    print(TA.check_tendency(10))
