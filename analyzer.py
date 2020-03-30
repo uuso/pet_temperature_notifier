@@ -16,6 +16,7 @@ logger.addHandler(handler_file)
 handler_file.setLevel(logging.DEBUG)
 logger.setLevel(logging.DEBUG)
 
+DEBUG_DATE_NOW = isoparse('2020-03-29T16:24:26.014048')
 
 class TempAnalytics:
     """
@@ -40,8 +41,10 @@ class TempAnalytics:
         """Заполнит систему предыдущими значениями (за последние 4 часа по-умолчанию)
         если такие имеются.
         """
-        border = (datetime.now() - timedelta(minutes=minutes)).timestamp()
-        # border = (isoparse('2020-03-29T16:24:26.014048') - timedelta(minutes=minutes)).timestamp()
+
+        now = DEBUG_DATE_NOW if DEBUG_DATE_NOW else datetime.now() ###
+        border = (now - timedelta(minutes=minutes)).timestamp()
+        
         logger.debug("")
         logger.debug("-"*80)
         logger.debug("Started filling TempAnalytics:")
@@ -157,9 +160,10 @@ class TempAnalytics:
             
         
 
-    def minutes_elapsed(self, unixtime):
-        delta = datetime.now() - datetime.fromtimestamp(unixtime)
-        # delta = isoparse('2020-03-29T16:24:26.014048') - datetime.fromtimestamp(unixtime)
+    def minutes_elapsed(self, unixtime):        
+        now = DEBUG_DATE_NOW if DEBUG_DATE_NOW else datetime.now() ###
+        delta = now - datetime.fromtimestamp(unixtime)
+
         return int(delta.seconds / 60)
 
     def put(self, note):
