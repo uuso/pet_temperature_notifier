@@ -2,15 +2,19 @@
 # install pySerial
 
 import os
+import sys
 import serial
 from serial.tools import list_ports
 import time, json, datetime
 from service import file_cutlines
 
 log_folder = "logs/"
+
 if not os.path.exists(log_folder):
     os.makedirs(log_folder)
+
 log_filepath = log_folder + "log.txt"
+
 
 notes_in_minute = 3 # Ардуино опрашивает датчик каждые 20 секунд
 
@@ -72,11 +76,21 @@ def serial_messaging_json(comport, delay=0.5, msec = False):
 
 
 if __name__ == "__main__":
+    if len(sys.argv) > 1:
+        log_folder = sys.argv[1]
+
+        if not os.path.exists(log_folder):
+            os.makedirs(log_folder)
+
+        log_filepath = log_folder + "log.txt"
+        print("Current log-file: "+log_filepath)
+
     str_size = len(
         '{"timestamp": "2020-04-08T03:48:48", "error": false, "temperature": 20.9, "humidity": 21.2}')
     day_lines = notes_in_minute*60*24
     size_treshold = 14*day_lines*str_size
-    
+
+
     comport = serial_port_path(default=1)
     if comport:    
         message = serial_messaging_json(comport)
