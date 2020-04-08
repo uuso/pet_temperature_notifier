@@ -78,6 +78,8 @@ def serial_messaging_json(comport, delay=0.5, msec = False):
 if __name__ == "__main__":
     if len(sys.argv) > 1:
         log_folder = sys.argv[1]
+        if log_folder[-1] != '/':
+            log_folder += '/'
 
         if not os.path.exists(log_folder):
             os.makedirs(log_folder)
