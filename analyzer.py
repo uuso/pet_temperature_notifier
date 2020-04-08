@@ -3,8 +3,8 @@ import logging
 from dateutil.parser import isoparse
 from datetime import datetime, timedelta
 from collections import deque
-from receiver import log_folder, log_filepath, notes_in_minute
 from file_read_backwards import FileReadBackwards
+from receiver import log_folder, log_filepath, notes_in_minute
 
 log_formatter = logging.Formatter("%(asctime)s\t%(levelname)s\t%(message)s")
 handler_file = logging.FileHandler(filename = log_folder+"debug.log")
@@ -29,13 +29,13 @@ class TempAnalytics:
 - в записях время записи будет храниться в формате UNIX-time (секунды с начала эпохи)
 для более быстрого сравнения
     """
-    _oldest_minutes = 60*4
-    _rescan_minutes = 5
+    _oldest_minutes = 60*4 # минут хранится
+    _rescan_minutes = 5 # частота запуска анализа
     _temp_delta = 2
     _timers = [10, 30, 60, 120]
     _inacc = 0.5
 
-    notes = deque()
+    notes = deque() # контейнер
 
     def __init__(self, filepath = log_filepath, minutes = _oldest_minutes):
         """Заполнит систему предыдущими значениями (за последние 4 часа по-умолчанию)
@@ -69,6 +69,7 @@ class TempAnalytics:
         logger.debug("-"*80)
     
     def __str__(self):
+        """В данный момент, выведет пять наиболее свежих записей контейнера"""
         show_notes = 5 * notes_in_minute
         strs = "The last {} notes in analytics:\n".format(show_notes)
 

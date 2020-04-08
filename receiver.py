@@ -13,7 +13,7 @@ log_filepath = log_folder + "log.txt"
 
 notes_in_minute = 3 # Ардуино опрашивает датчик каждые 20 секунд
 
-def choose_comport(default = False):
+def serial_port_path(default = False):
     """Функция возвращает путь для обращения к COM-порту.
     По умолчанию, выводит список доступных портов и ждёт ответа оператора 
     на запрос выбора порта. Список портов нумерован и начинается с единицы.
@@ -47,7 +47,7 @@ def choose_comport(default = False):
     return coms[val-1]
     
 def serial_messaging_json(comport, delay=0.5, msec = False):
-    """Функция получения JSON от COM-порта по пути $comport.
+    """Функция получения генератора сообщений JSON от COM-порта по пути $comport.
     
     Каждые $delay секунд опрашивает порт на наличие данных, возвращает объект JSON формата 
     {"timestamp": <ISO8601_datetime>, <JSONReceivedData>}, 
@@ -72,16 +72,14 @@ def serial_messaging_json(comport, delay=0.5, msec = False):
 
 
 if __name__ == "__main__":
-    comport = choose_comport(default=1)
-    if not comport:
-        exit()
-    
-    message = serial_messaging_json(comport)
-    while True:
-        msg = next(message)
-        with open(log_filepath, "a", encoding="utf-8") as logfile:
-            logfile.write("{}\n".format(json.dumps(msg)))
-            print(msg)
+    comport = serial_port_path(default=1)
+    if comport:    
+        message = serial_messaging_json(comport)
+        while True:
+            msg = next(message)
+            with open(log_filepath, "a", encoding="utf-8") as logfile:
+                logfile.write("{}\n".format(json.dumps(msg)))
+                print(msg)
             
         
         
