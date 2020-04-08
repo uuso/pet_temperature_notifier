@@ -1,20 +1,32 @@
 # http://www.varesano.net/blog/fabio/serial%20rs232%20connections%20python
 # install pySerial
 
+import os
 import serial
 from serial.tools import list_ports
 import time, json, datetime
 
 log_folder = "logs/"
+if not os.path.exists(log_folder):
+    os.makedirs(log_folder)
 log_filepath = log_folder + "log.txt"
 
 notes_in_minute = 3 # Ардуино опрашивает датчик каждые 20 секунд
 
 def choose_comport(default = False):
+    """Функция возвращает путь для обращения к COM-порту.
+    По умолчанию, выводит список доступных портов и ждёт ответа оператора 
+    на запрос выбора порта. Список портов нумерован и начинается с единицы.
+    
+    Будет запрашивать выбор пока не выберут один из доступных портов.
+    Вернёт 0/False в случаях:
+        - нет портов
+        - аргументом указан недопустимый порт
+    """
     coms = list_ports.comports(True)
     if not len(coms):
         print("No COM-devices available.\n")
-        return
+        return False
 
     val = 0
     while not val:
@@ -28,22 +40,30 @@ def choose_comport(default = False):
             print("Wrong value. Please try again.")
             val = 0
             if default: # Если выбранное значение default не из списка портов
-                return val
+                return False
     if default:
         print("Selected COM-device (default): %d" % (default))
     print()
     return coms[val-1]
     
-def serial_messaging_json(comport, delay = 0.5):
+def serial_messaging_json(comport, delay=0.5, msec = False):
+    """Функция получения JSON от COM-порта по пути $comport.
+    
+    Каждые $delay секунд опрашивает порт на наличие данных, возвращает объект JSON формата 
+    {"timestamp": <ISO8601_datetime>, <JSONReceivedData>}, 
+    
+    Пример:
+        {"timestamp": "2020-04-08T03:48:48", "error": false, "temperature": 20.9, "humidity": 21.2}
+    """
     ser = serial.Serial(port = comport.device)
     while True:        
-        if ser.in_waiting:
-            data = {}
+        if ser.in_waiting:            
+            if msec:
+                data = {"timestamp": datetime.datetime.now().isoformat() if msec 
+                    else datetime.datetime.now().isoformat().split('.')[0]}
             msg = ser.read_until()[:-2].decode('utf-8') # [:-2] - из-за последних двух байтов '\r\n'            
             try:
                 temp = json.loads(msg)
-                # data["timestamp"] = datetime.datetime.now().isoformat() # не удобно - когда меняется температура едет табличка в логе
-                data = {"timestamp": datetime.datetime.now().isoformat()}
                 data.update(temp)                
                 yield data
             except Exception as ex:
@@ -52,14 +72,14 @@ def serial_messaging_json(comport, delay = 0.5):
 
 
 if __name__ == "__main__":
-    comport = choose_comport(1)
+    comport = choose_comport(default=1)
     if not comport:
         exit()
     
     message = serial_messaging_json(comport)
-    with open(log_filepath, "a", encoding="utf-8") as logfile:
-        while True:
-            msg = next(message)
+    while True:
+        msg = next(message)
+        with open(log_filepath, "a", encoding="utf-8") as logfile:
             logfile.write("{}\n".format(json.dumps(msg)))
             print(msg)
             
