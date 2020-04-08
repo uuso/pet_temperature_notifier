@@ -57,10 +57,9 @@ def serial_messaging_json(comport, delay=0.5, msec = False):
     """
     ser = serial.Serial(port = comport.device)
     while True:        
-        if ser.in_waiting:            
-            if msec:
-                data = {"timestamp": datetime.datetime.now().isoformat() if msec 
-                    else datetime.datetime.now().isoformat().split('.')[0]}
+        if ser.in_waiting:
+            data = {"timestamp": datetime.datetime.now().isoformat() if msec 
+                else datetime.datetime.now().isoformat().split('.')[0]}
             msg = ser.read_until()[:-2].decode('utf-8') # [:-2] - из-за последних двух байтов '\r\n'            
             try:
                 temp = json.loads(msg)
