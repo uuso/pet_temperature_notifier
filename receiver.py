@@ -5,6 +5,7 @@ import os
 import serial
 from serial.tools import list_ports
 import time, json, datetime
+from service import file_cutlines
 
 log_folder = "logs/"
 if not os.path.exists(log_folder):
@@ -71,6 +72,11 @@ def serial_messaging_json(comport, delay=0.5, msec = False):
 
 
 if __name__ == "__main__":
+    str_size = len(
+        '{"timestamp": "2020-04-08T03:48:48", "error": false, "temperature": 20.9, "humidity": 21.2}')
+    day_lines = notes_in_minute*60*24
+    size_treshold = 14*day_lines*str_size
+    
     comport = serial_port_path(default=1)
     if comport:    
         message = serial_messaging_json(comport)
@@ -79,6 +85,6 @@ if __name__ == "__main__":
             with open(log_filepath, "a", encoding="utf-8") as logfile:
                 logfile.write("{}\n".format(json.dumps(msg)))
                 print(msg)
-            
-        
-        
+            # cut some lines to prevent file enlargement
+            if os.path.getsize(log_filepath) > size_treshold:
+                file_cutlines(log_filepath, day_lines)
