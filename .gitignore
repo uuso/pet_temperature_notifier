@@ -3,3 +3,4 @@ serial_venv/
 secrets.py
 logs/
 __pycache__/
+plots/
