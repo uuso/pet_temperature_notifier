@@ -1,7 +1,7 @@
 .vscode/
 serial_venv/
 venv/
-# secrets.py
+secrets.py
 logs/
 __pycache__/
 plots/
