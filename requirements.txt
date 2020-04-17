@@ -1,4 +1,6 @@
 file-read-backwards==2.0.0
 pyserial==3.4
+PySocks==1.7.1
 python-dateutil==2.8.1
+python-telegram-bot==12.6.1
 matplotlib==3.2.1

@@ -81,17 +81,19 @@ def filter_values(values, max_delta=0.5):
 			values[_] = (values[_-1] + values[_+1]) / 2
 
 
-def create_plotfile(folder = "./plots/", last_hours=4):
+def create_plotfile(folder = "./plots/", last_hours=4, logfile=log_filepath, suffix=""):
+	"""Returns a path to created plot over JSON-logfile values with "timestamp" and "temp"."""
 	if folder and not os.path.exists(folder):
 		os.makedirs(folder)
 
-	time, temp = load_jsonfile_arglists(log_filepath, "timestamp", "temperature", 
+	time, temp = load_jsonfile_arglists(logfile, "timestamp", "temperature", 
 				 backwards=True, count=notes_in_minute*60*last_hours)
 	
 	filter_values(temp)
 	time_dt = list(map(isoparse, time))
 
-	return makeplot_datetime(folder+time[-1].replace(':', '-')+f'_{last_hours}hours', time_dt, temp)
+	filename = folder + time[-1].replace(':', '-') + f'_{suffix}_{last_hours}hours'
+	return makeplot_datetime(filename, time_dt, temp)
 
 
 if __name__ == "__main__":
