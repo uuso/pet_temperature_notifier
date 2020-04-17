@@ -82,7 +82,7 @@ def filter_values(values, max_delta=0.5):
 
 
 def create_plotfile(folder = "./plots/", last_hours=4):
-	if not os.path.exists(folder):
+	if folder and not os.path.exists(folder):
 		os.makedirs(folder)
 
 	time, temp = load_jsonfile_arglists(log_filepath, "timestamp", "temperature", 
@@ -91,7 +91,7 @@ def create_plotfile(folder = "./plots/", last_hours=4):
 	filter_values(temp)
 	time_dt = list(map(isoparse, time))
 
-	return makeplot_datetime(folder+time[-1]+f'_{last_hours}hours', time_dt, temp)
+	return makeplot_datetime(folder+time[-1].replace(':', '-')+f'_{last_hours}hours', time_dt, temp)
 
 
 if __name__ == "__main__":
